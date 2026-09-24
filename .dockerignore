@@ -1,0 +1,46 @@
+# Виртуальное окружение
+venv/
+.venv/
+env/
+
+# Git
+.git/
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# IDE
+.idea/
+.vscode/
+
+# Тесты и документация (не нужны в образе)
+tests/
+docs/
+scripts/
+data/
+templates/
+*.md
+!README.md
+
+# Переменные окружения
+.env
+.env.local
+.env.*.local
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# ОС
+.DS_Store
+Thumbs.db

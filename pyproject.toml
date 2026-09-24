@@ -1,0 +1,47 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra -q"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/venv/*",
+    "*/__pycache__/*",
+    # Демо-файлы курса (src/main.py — журнал всех уроков)
+    "src/main.py",
+    # Интеграции с реальными внешними системами (PostgreSQL, MongoDB, RabbitMQ, Anthropic)
+    "src/database/connection.py",
+    "src/database/queries.py",
+    "src/database/async_repository.py",
+    "src/services/moderation.py",
+    "src/services/product_ai.py",
+    "src/services/queue_consumer.py",
+    "src/services/queue_producer.py",
+    "src/services/log_service.py",
+    # Учебные демо-модули, не используются в API
+    "src/services/async_cache.py",
+    "src/services/async_service.py",
+    "src/services/price_checker.py",
+    "src/services/product_calculator.py",
+    "src/services/product_validator.py",
+    "src/api/routes/background.py",
+    "src/models/delivery.py",
+    "src/models/payment.py",
+    "src/api/schemas.py",
+    "src/scripts/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "pass",
+    "@abstractmethod",
+]
+show_missing = true
+fail_under = 80

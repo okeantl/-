@@ -1,6 +1,3 @@
-import os
-
-from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
@@ -10,14 +7,9 @@ from slowapi.errors import RateLimitExceeded
 from src.api import auth
 from src.api.limiter import limiter
 from src.api.routes import background, orders, products
+from src.core.config import settings
 
-load_dotenv()
-
-# Домены фронтенда, которым разрешены запросы к API
-CORS_ORIGINS = os.getenv(
-    "CORS_ORIGINS",
-    "http://localhost:3000",
-    ).split(",")
+CORS_ORIGINS = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
 
 
 class OrderCreate(BaseModel):
@@ -38,6 +30,7 @@ class ProductCreate(BaseModel):
             raise ValueError("Название не может быть пустым")
         return v.strip()
 
+
 app = FastAPI()
 
 app.add_middleware(
@@ -46,44 +39,41 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
-    )
-# Лимитер и обработчик ошибки 429 Too Many Requests
+)
 app.state.limiter = limiter
-app.add_exception_handler(
-    RateLimitExceeded,
-    _rate_limit_exceeded_handler,
-    )
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
-# Товары пока живут в памяти: POST, PUT и DELETE меняют этот список
+
+# Товары в памяти: POST, PUT, DELETE меняют этот список
 products_data = [
     {"id": 1, "name": "Ноутбук", "price": 50000, "quantity": 10},
     {"id": 2, "name": "Мышь", "price": 1500, "quantity": 20},
-    {"id": 3, "name": "Клавиатура", "price": 3000, "quantity": 15}
-    ]
+    {"id": 3, "name": "Клавиатура", "price": 3000, "quantity": 15},
+]
 
 
 def find_product(product_id: int) -> dict:
-    """Найти товар по ID или ответить 404 Not Found"""
+    """Найти товар по ID или ответить 404 Not Found."""
     for product in products_data:
         if product["id"] == product_id:
             return product
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Товар с ID {product_id} не найден"
-        )
+        detail=f"Товар с ID {product_id} не найден",
+    )
 
-# GET - список товаров (200 OK)
+
 @app.get("/products")
-@limiter.limit(os.getenv("RATE_LIMIT_PRODUCTS", "30/minute"))
+@limiter.limit(settings.rate_limit_products)
 def get_products(request: Request):
     return products_data
 
-# GET - товар по ID (200 OK или 404 Not Found)
+
 @app.get("/products/{product_id}")
 def get_product(product_id: int):
     return find_product(product_id)
 
-# POST - создание товара (201 Created; неверные данные отклоняет ProductCreate - 422)
+
 @app.post("/products", status_code=status.HTTP_201_CREATED)
 def create_product(product: ProductCreate):
     new_id = max((p["id"] for p in products_data), default=0) + 1
@@ -91,36 +81,31 @@ def create_product(product: ProductCreate):
     products_data.append(new_product)
     return new_product
 
-# PUT - полное обновление товара (200 OK или 404 Not Found)
+
 @app.put("/products/{product_id}")
 def update_product(product_id: int, product: ProductCreate):
     existing = find_product(product_id)
     existing.update(product.model_dump())
     return existing
 
-# DELETE - удаление товара (204 No Content или 404 Not Found)
+
 @app.delete("/products/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_product(product_id: int):
     products_data.remove(find_product(product_id))
 
+
 @app.post("/orders")
 def create_order(order: OrderCreate):
-    # В реальном приложении здесь будет создание заказа в БД
     return {
         "id": 5,
         "user_id": order.user_id,
         "product_id": order.product_id,
         "quantity": order.quantity,
-        "message": "Заказ создан"
-        }
+        "message": "Заказ создан",
+    }
 
 
-# Роутер регистрации и входа: POST /register, POST /login
 app.include_router(auth.router)
-
-# Слоистые роутеры: GET /api/v1/products/{id}, POST /api/v1/orders/, POST /api/v1/orders/{id}/cancel, GET /api/v1/orders/{id}
 app.include_router(products.router, prefix="/api/v1")
 app.include_router(orders.router, prefix="/api/v1")
-
-# Роутер фоновых задач: POST /orders/{order_id}/confirm, POST /exports, GET /exports/{task_id}, POST /orders/background
 app.include_router(background.router)
