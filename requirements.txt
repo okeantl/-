@@ -1,0 +1,21 @@
+psycopg2-binary
+requests
+python-dotenv
+fastapi
+uvicorn
+pydantic
+sqlalchemy[asyncio]
+redis
+pymongo==4.6.0
+aiohttp
+asyncpg
+passlib[bcrypt]
+bcrypt<4.1  # passlib 1.7.4 не работает с bcrypt 4.1+
+slowapi
+pydantic-settings
+anthropic
+chromadb
+httpx
+pika
+pytest
+pytest-cov
